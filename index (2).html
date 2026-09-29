@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة جدول الإمتحانات - 2026/2027</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
+        
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+        }
+
+        /* Custom Checkbox */
+        .checkbox-wrapper input:checked + div {
+            background-color: #10b981;
+            border-color: #10b981;
+        }
+        .checkbox-wrapper input:checked + div svg {
+            display: block;
+        }
+        .checkbox-wrapper input:disabled + div {
+            background-color: #e5e7eb;
+            border-color: #d1d5db;
+            cursor: not-allowed;
+        }
+
+        /* Toast Animation */
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        .toast-enter { animation: slideIn 0.3s forwards; }
+        .toast-exit { animation: slideOut 0.3s forwards; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+
+        /* Print Styles */
+        @media print {
+            body * { visibility: hidden; }
+            #student-schedule-container, #student-schedule-container * { visibility: visible; }
+            #student-schedule-container { position: absolute; left: 0; top: 0; width: 100%; padding: 0; margin: 0; }
+            .no-print { display: none !important; }
+            .glass-panel { box-shadow: none; border: none; background: transparent; backdrop-filter: none; }
+            .print\:bg-white { background-color: white !important; }
+            .print\:p-0 { padding: 0 !important; }
+        }
+    </style>
+</head>
+<body class="text-gray-800 h-screen flex flex-col overflow-hidden">
+
+    <header class="bg-indigo-700 text-white shadow-md z-10 relative">
+        <div class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-calendar-alt text-2xl"></i>
+                <div>
+                    <h1 class="text-xl font-bold leading-tight">منظومة الإمتحانات</h1>
+                    <p class="text-indigo-200 text-xs">Copie de Emploi_d'examen_Controle_1er_Trim_2026-2027(1).xlsx</p>
+                </div>
+            </div>
+            <button id="btn-home" class="hidden hover:bg-indigo-600 px-4 py-2 rounded-lg transition text-sm font-medium">
+                <i class="fas fa-home ml-2"></i>الرئيسية
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 relative w-full max-w-7xl mx-auto">
+        
+        <div id="view-home" class="flex flex-col items-center justify-center h-full max-w-5xl mx-auto">
+            <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">الرجاء تحديد صفة الدخول</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
+                <button onclick="switchView('teacher')" class="glass-panel p-10 rounded-2xl flex flex-col items-center justify-center gap-4 hover:shadow-xl hover:-translate-y-1 transition-all group border-2 border-transparent hover:border-emerald-500">
+                    <div class="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                        <i class="fas fa-chalkboard-teacher text-4xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800">فضاء الأستاذ</h3>
+                    <p class="text-gray-500 text-center text-sm">تسجيل البيانات واختيار جدول المراقبة (أقصى حد حصتان يومياً)</p>
+                </button>
+
+                <button onclick="switchView('admin')" class="glass-panel p-10 rounded-2xl flex flex-col items-center justify-center gap-4 hover:shadow-xl hover:-translate-y-1 transition-all group border-2 border-transparent hover:border-indigo-500">
+                    <div class="w-20 h-20 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                        <i class="fas fa-user-shield text-4xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800">فضاء الإدارة</h3>
+                    <p class="text-gray-500 text-center text-sm">متابعة الاختيارات وجدول الإمتحانات الشامل</p>
+                </button>
+
+                <button onclick="switchView('student')" class="glass-panel p-10 rounded-2xl flex flex-col items-center justify-center gap-4 hover:shadow-xl hover:-translate-y-1 transition-all group border-2 border-transparent hover:border-blue-500">
+                    <div class="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                        <i class="fas fa-user-graduate text-4xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-800">فضاء التلميذ</h3>
+                    <p class="text-gray-500 text-center text-sm">الإطلاع على جدول الفروض الخاص بقسمك</p>
+                </button>
+            </div>
+        </div>
+
+        <div id="view-teacher" class="hidden max-w-5xl mx-auto">
+            <div class="glass-panel rounded-2xl overflow-hidden shadow-lg">
+                <div class="bg-emerald-600 text-white p-6">
+                    <h2 class="text-2xl font-bold"><i class="fas fa-edit ml-2"></i>إدخال رغبات المراقبة</h2>
+                    <p class="text-emerald-100 mt-1">الرجاء إدخال بياناتك واختيار الحصص المرغوبة (مادتان/حصتان كحد أقصى في اليوم للأستاذ وللقسم)</p>
+                </div>
+                
+                <form id="teacher-form" class="p-6 sm:p-8">
+                    <!-- Personal Info -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">الإسم واللقب <span class="text-red-500">*</span></label>
+                            <input type="text" id="t-name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" placeholder="مثال: أحمد بن صالح">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">رقم الهاتف <span class="text-red-500">*</span></label>
+                            <input type="tel" id="t-phone" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" placeholder="22 123 456">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">المادة <span class="text-red-500">*</span></label>
+                            <input type="text" id="t-subject" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" placeholder="مثال: رياضيات">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">القسم <span class="text-red-500">*</span></label>
+                            <input list="classes-list" type="text" id="t-class" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition" placeholder="اختر من القائمة...">
+                            <datalist id="classes-list">
+                                <!-- المرحلة الإعدادية -->
+                                <option value="7 أساسي 1">
+                                <option value="7 أساسي 2">
+                                <option value="7 أساسي 3">
+                                <option value="7 أساسي 4">
+                                <option value="7 أساسي 5">
+                                <option value="7 أساسي 6">
+                                <option value="8 أساسي 1">
+                                <option value="8 أساسي 2">
+                                <option value="8 أساسي 3">
+                                <option value="8 أساسي 4">
+                                <option value="9 أساسي 1">
+                                <option value="9 أساسي 2">
+                                <option value="9 أساسي 3">
+                                <option value="9 أساسي 4">
+                                <!-- المرحلة الثانوية -->
+                                <option value="الأولى ثانوي 1">
+                                <option value="الأولى ثانوي 2">
+                                <option value="الأولى ثانوي 3">
+                                <option value="الثانية علوم">
+                                <option value="الثانية اقتصاد و خدمات">
+                                <option value="الثانية علوم الإعلامية">
+                                <option value="الثالثة اقتصاد و تصرف">
+                                <option value="الرابعة إقتصاد و تصرف">
+                            </datalist>
+                        </div>
+                    </div>
+
+                    <!-- Schedule Selection Calendar -->
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">رزنامة الإمتحانات (اختر الأيام والحصص)</h3>
+                    <div class="flex flex-col lg:flex-row gap-6 mb-8">
+                        <div class="flex-1 bg-white border border-gray-200 rounded-xl shadow-sm p-4 h-fit">
+                            <div class="flex justify-between items-center mb-4">
+                                <button type="button" onclick="changeMonth(1)" class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"><i class="fas fa-chevron-right"></i></button>
+                                <h4 id="calendar-month-year" class="font-bold text-lg text-gray-800"></h4>
+                                <button type="button" onclick="changeMonth(-1)" class="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"><i class="fas fa-chevron-left"></i></button>
+                            </div>
+                            <div class="grid grid-cols-7 gap-1 text-center mb-2" id="calendar-weekdays"></div>
+                            <div class="grid grid-cols-7 gap-1 text-center" id="calendar-days"></div>
+                        </div>
+
+                        <div class="lg:w-7/12 xl:w-2/3 bg-gray-50 border border-gray-200 rounded-xl p-4 hidden flex flex-col" id="slots-panel">
+                            <div class="flex items-center gap-2 mb-4 border-b border-gray-200 pb-2 shrink-0">
+                                <i class="fas fa-calendar-day text-indigo-600 text-xl"></i>
+                                <h4 class="font-bold text-gray-800" id="selected-date-display">اختر يوماً</h4>
+                                <span id="day-counter" class="mr-auto text-xs font-semibold bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full">0/2 حصص</span>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 overflow-y-auto pr-1 max-h-[350px]" id="slots-container"></div>
+                            <p class="text-xs text-gray-500 mt-4 shrink-0"><i class="fas fa-info-circle ml-1"></i>يمكنك اختيار حصتين كحد أقصى في اليوم الواحد.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end pt-4 border-t border-gray-200">
+                        <button type="submit" id="btn-submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition-all flex items-center gap-2 disabled:opacity-50">
+                            <span>إرسال الاختيارات</span>
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- My Scheduled Exams Section -->
+                <div class="p-6 sm:p-8 border-t border-gray-200 bg-gray-50/50">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4"><i class="fas fa-tasks ml-2 text-emerald-600"></i>فروضي المبرمجة</h3>
+                    <div id="teacher-exams-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div class="text-gray-500 text-sm italic col-span-full">لا توجد فروض مبرمجة حالياً.</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div id="view-admin" class="hidden h-full flex flex-col">
+            <div class="glass-panel rounded-2xl overflow-hidden shadow-lg flex-1 flex flex-col relative">
+                <div class="bg-indigo-700 text-white p-6 flex justify-between items-center z-10 relative no-print">
+                    <div>
+                        <h2 class="text-2xl font-bold"><i class="fas fa-calendar-check ml-2"></i>الجدول الشامل (نتائج الإدارة)</h2>
+                        <p class="text-indigo-200 mt-1">يتم عرض المواد والأقسام المبرمجة لكل يوم. اضغط على أي فرض للتعديل أو الحذف.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <span class="bg-white/20 px-3 py-1 rounded-full text-sm font-medium" id="total-submissions">0 مشاركات</span>
+                    </div>
+                </div>
+                
+                <div class="p-4 sm:p-6 flex-1 flex flex-col bg-gray-50/50 overflow-hidden relative">
+                    
+                    <!-- Privacy Banner -->
+                    <div class="bg-amber-50 border-r-4 border-amber-500 p-4 mb-4 rounded shadow-sm no-print shrink-0">
+                        <div class="flex items-start gap-3">
+                            <i class="fas fa-shield-alt text-amber-500 mt-1 text-lg"></i>
+                            <div>
+                                <h4 class="text-sm font-bold text-amber-800">تنبيه الخصوصية وإدارة البيانات</h4>
+                                <p class="text-xs text-amber-700 mt-1">
+                                    نظراً لأن هذا التخزين المشترك عام عبر رابط Canvas، يرجى عدم جمع أو إدخال بيانات شخصية حساسة. إذا كنت بحاجة إلى صلاحيات وصول حقيقية ومستويات أمان متقدمة (Authentification + Permissions)، نقترح إنشاء مشروع Firebase خاص بك وربطه بهذا التطبيق.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200 shrink-0 no-print">
+                        <button type="button" onclick="changeAdminMonth(1)" class="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"><i class="fas fa-chevron-right text-xl"></i></button>
+                        <h3 id="admin-calendar-month-year" class="text-2xl font-extrabold text-indigo-800"></h3>
+                        <button type="button" onclick="changeAdminMonth(-1)" class="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"><i class="fas fa-chevron-left text-xl"></i></button>
+                    </div>
+                    
+                    <div class="flex-1 flex flex-col overflow-hidden">
+                        <div class="grid grid-cols-7 gap-2 mb-2 shrink-0" id="admin-calendar-weekdays"></div>
+                        <div id="admin-calendar-days" class="grid grid-cols-7 gap-2 flex-1 overflow-y-auto pb-4 custom-scrollbar"></div>
+                    </div>
+
+                    <div id="admin-loading" class="hidden absolute inset-0 bg-white/90 backdrop-blur-sm z-20 flex flex-col items-center justify-center text-gray-500">
+                        <i class="fas fa-spinner fa-spin text-5xl mb-4 text-indigo-500"></i>
+                        <p class="text-lg font-medium">جاري تحميل البيانات وتحديث الرزنامة...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-student" class="hidden h-full flex flex-col max-w-5xl mx-auto w-full">
+            <div class="glass-panel rounded-2xl overflow-hidden shadow-lg flex-1 flex flex-col relative">
+                <div class="bg-blue-600 text-white p-6 z-10 relative no-print">
+                    <h2 class="text-2xl font-bold"><i class="fas fa-user-graduate ml-2"></i>جدول الفروض للتلميذ</h2>
+                    <p class="text-blue-100 mt-1">الرجاء اختيار القسم لعرض جدول الامتحانات الخاص بك للثلاثي الأول</p>
+                </div>
+                
+                <div class="p-6 bg-white border-b border-gray-100 flex flex-col sm:flex-row gap-4 items-center shrink-0 no-print">
+                    <label class="font-bold text-gray-700 whitespace-nowrap">الرجاء اختيار القسم:</label>
+                    <input list="classes-list" type="text" id="s-class-select" class="w-full sm:w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" placeholder="مثال: 7 أساسي 1...">
+                    <div class="flex w-full sm:w-auto gap-2">
+                        <button onclick="fetchStudentSchedule()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold transition-colors shadow-sm">
+                            <i class="fas fa-search ml-2"></i>بحث
+                        </button>
+                        <button onclick="window.print()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-bold transition-colors shadow-sm" title="طباعة الجدول">
+                            <i class="fas fa-print"></i> طباعة
+                        </button>
+                    </div>
+                </div>
+
+                <div class="p-4 sm:p-6 flex-1 bg-gray-50 overflow-y-auto relative custom-scrollbar print:bg-white print:p-0">
+                    <div id="student-schedule-container" class="space-y-6">
+                        <div class="h-full flex flex-col items-center justify-center text-gray-400 py-12 min-h-[300px]">
+                            <i class="fas fa-search text-6xl mb-4 opacity-50"></i>
+                            <p class="text-xl font-medium">قم باختيار قسمك للبحث عن الفروض</p>
+                        </div>
+                    </div>
+                    
+                    <div id="student-loading" class="hidden absolute inset-0 bg-white/90 backdrop-blur-sm z-20 flex flex-col items-center justify-center text-gray-500">
+                        <i class="fas fa-spinner fa-spin text-5xl mb-4 text-blue-500"></i>
+                        <p class="text-lg font-medium">جاري جلب الجدول...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Password Modal -->
+    <div id="password-modal" class="hidden fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm transform scale-95 transition-transform duration-300" id="password-modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-800" id="modal-title">الرجاء إدخال كلمة المرور</h3>
+                <button onclick="closePasswordModal()" class="text-gray-400 hover:text-red-500 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <p class="text-sm text-gray-500 mb-6" id="modal-desc">هذا الفضاء محمي، يرجى إدخال كلمة المرور للمتابعة.</p>
+            <form id="password-form" onsubmit="verifyPassword(event)">
+                <div class="mb-4 relative">
+                    <i class="fas fa-lock absolute right-3 top-3.5 text-gray-400"></i>
+                    <input type="password" id="modal-password" class="w-full pl-4 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition text-left" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-lg transition-colors flex justify-center items-center gap-2">
+                    دخول <i class="fas fa-sign-in-alt"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Edit Modal -->
+    <div id="admin-edit-modal" class="hidden fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md transform scale-95 transition-transform duration-300" id="admin-edit-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-gray-800">تعديل أو حذف الفرض</h3>
+                <button onclick="closeAdminEditModal()" class="text-gray-400 hover:text-red-500 transition-colors"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <form id="admin-edit-form" class="space-y-4">
+                <input type="hidden" id="edit-doc-id">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">تاريخ الفرض</label>
+                    <input type="date" id="edit-date" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">الحصة</label>
+                    <select id="edit-slot" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">القسم</label>
+                    <input type="text" id="edit-class" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                </div>
+                <div class="flex justify-between pt-4 mt-4 border-t">
+                    <button type="button" onclick="deleteAdminExam()" class="bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2 rounded-lg font-medium transition"><i class="fas fa-trash-alt ml-2"></i>حذف الفرض</button>
+                    <button type="submit" class="bg-indigo-600 text-white hover:bg-indigo-700 px-6 py-2 rounded-lg font-medium transition"><i class="fas fa-save ml-2"></i>حفظ التعديلات</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Global Confirm Modal -->
+    <div id="global-confirm-modal" class="hidden fixed inset-0 bg-gray-900/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4 opacity-0 transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-sm text-center transform scale-95 transition-transform" id="global-confirm-content">
+            <i class="fas fa-exclamation-circle text-red-500 text-5xl mb-4"></i>
+            <h3 class="text-xl font-bold text-gray-800 mb-2" id="confirm-title">تأكيد</h3>
+            <p class="text-gray-600 mb-6" id="confirm-message">هل أنت متأكد من هذا الإجراء؟</p>
+            <div class="flex gap-3 justify-center">
+                <button onclick="closeGlobalConfirm()" class="px-5 py-2.5 bg-gray-200 text-gray-800 font-medium rounded-lg hover:bg-gray-300 transition">إلغاء</button>
+                <button id="btn-confirm-action" class="px-5 py-2.5 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition">تأكيد</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="fixed bottom-5 left-5 flex flex-col gap-3 z-50"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, serverTimestamp, getDocs, doc, deleteDoc, updateDoc, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-exam-app';
+        let firebaseConfig = null;
+        let db = null;
+        let auth = null;
+        let currentUser = null;
+
+        try {
+            if (typeof __firebase_config !== 'undefined') {
+                firebaseConfig = JSON.parse(__firebase_config);
+            }
+        } catch (e) {
+            console.error("Firebase config parsing error", e);
+        }
+
+        // 9 Slots from 08:00 to 17:00
+        const SLOTS = [
+            { id: 's1', time: '08:00 - 09:00', name: 'الحصة 1' },
+            { id: 's2', time: '09:00 - 10:00', name: 'الحصة 2' },
+            { id: 's3', time: '10:00 - 11:00', name: 'الحصة 3' },
+            { id: 's4', time: '11:00 - 12:00', name: 'الحصة 4' },
+            { id: 's5', time: '12:00 - 13:00', name: 'الحصة 5' },
+            { id: 's6', time: '13:00 - 14:00', name: 'الحصة 6' },
+            { id: 's7', time: '14:00 - 15:00', name: 'الحصة 7' },
+            { id: 's8', time: '15:00 - 16:00', name: 'الحصة 8' },
+            { id: 's9', time: '16:00 - 17:00', name: 'الحصة 9' }
+        ];
+        
+        const WEEKDAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+        const MONTHS = ['جانفي', 'فيفري', 'مارس', 'أفريل', 'ماي', 'جوان', 'جويلية', 'أوت', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+
+        let currentMonth = new Date().getMonth();
+        let currentYear = new Date().getFullYear();
+        let selectedDateStr = null;
+        let calendarSelections = {}; 
+        let unsubscribeAdmin = null;
+
+        let allSubmissions = [];
+        let adminMonth = new Date().getMonth();
+        let adminYear = new Date().getFullYear();
+
+        let pendingView = null;
+        const PASSWORDS = { teacher: 'prof', admin: 'admin' };
+
+        window.showToast = (message, type = 'success') => {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const colors = { success: 'bg-emerald-500', error: 'bg-red-500', warning: 'bg-amber-500', info: 'bg-blue-500' };
+            const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
+
+            toast.className = `${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 toast-enter max-w-sm`;
+            toast.innerHTML = `<i class="fas ${icons[type]} text-lg"></i><span class="font-medium text-sm leading-tight">${message}</span>`;
+            
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.remove('toast-enter');
+                toast.classList.add('toast-exit');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        };
+
+        window.switchView = (viewId, skipAuth = false) => {
+            if (!skipAuth && (viewId === 'teacher' || viewId === 'admin')) {
+                openPasswordModal(viewId);
+                return;
+            }
+
+            document.getElementById('view-home').classList.add('hidden');
+            document.getElementById('view-teacher').classList.add('hidden');
+            document.getElementById('view-admin').classList.add('hidden');
+            document.getElementById('view-student').classList.add('hidden');
+            document.getElementById('btn-home').classList.remove('hidden');
+
+            document.getElementById(`view-${viewId}`).classList.remove('hidden');
+
+            if (viewId === 'home') {
+                document.getElementById('btn-home').classList.add('hidden');
+            } else if (viewId === 'teacher') {
+                renderCalendar();
+                if(db && currentUser) loadTeacherExams();
+            } else if (viewId === 'admin') {
+                if(!db || !currentUser) showToast('جاري الاتصال بقاعدة البيانات، يرجى الانتظار', 'warning');
+                loadAdminData();
+            }
+        };
+
+        window.openPasswordModal = (viewId) => {
+            pendingView = viewId;
+            const modal = document.getElementById('password-modal');
+            const content = document.getElementById('password-modal-content');
+            document.getElementById('modal-title').innerText = viewId === 'teacher' ? 'دخول فضاء الأستاذ' : 'دخول فضاء الإدارة';
+            const input = document.getElementById('modal-password');
+            input.value = '';
+            
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); }, 10);
+            setTimeout(() => input.focus(), 300);
+        };
+
+        window.closePasswordModal = () => {
+            const modal = document.getElementById('password-modal');
+            const content = document.getElementById('password-modal-content');
+            modal.classList.add('opacity-0');
+            content.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); pendingView = null; }, 300);
+        };
+
+        window.verifyPassword = (e) => {
+            e.preventDefault();
+            const input = document.getElementById('modal-password').value;
+            if (input === PASSWORDS[pendingView]) {
+                showToast('تم التحقق بنجاح', 'success');
+                switchView(pendingView, true);
+                closePasswordModal();
+            } else {
+                showToast('كلمة المرور خاطئة', 'error');
+                document.getElementById('modal-password').value = '';
+                document.getElementById('modal-password').focus();
+            }
+        };
+
+        document.getElementById('btn-home').addEventListener('click', () => switchView('home'));
+
+        let pendingConfirmAction = null;
+        window.openGlobalConfirm = (title, message, action) => {
+            document.getElementById('confirm-title').innerText = title;
+            document.getElementById('confirm-message').innerText = message;
+            pendingConfirmAction = action;
+            const modal = document.getElementById('global-confirm-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('opacity-0'); document.getElementById('global-confirm-content').classList.remove('scale-95'); }, 10);
+        };
+        window.closeGlobalConfirm = () => {
+            const modal = document.getElementById('global-confirm-modal');
+            modal.classList.add('opacity-0');
+            document.getElementById('global-confirm-content').classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); pendingConfirmAction = null; }, 300);
+        };
+        document.getElementById('btn-confirm-action').addEventListener('click', () => {
+            if(pendingConfirmAction) pendingConfirmAction();
+            closeGlobalConfirm();
+        });
+
+        const renderCalendar = () => {
+            const daysContainer = document.getElementById('calendar-days');
+            const monthYearDisplay = document.getElementById('calendar-month-year');
+            const weekdaysContainer = document.getElementById('calendar-weekdays');
+
+            daysContainer.innerHTML = '';
+            weekdaysContainer.innerHTML = WEEKDAYS.map(day => `<div class="text-xs font-bold text-gray-500 py-1">${day}</div>`).join('');
+
+            const date = new Date(currentYear, currentMonth, 1);
+            monthYearDisplay.innerText = `${MONTHS[currentMonth]} ${currentYear}`;
+
+            const firstDayIndex = date.getDay();
+            const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+            for (let i = 0; i < firstDayIndex; i++) daysContainer.innerHTML += `<div></div>`;
+
+            for (let i = 1; i <= lastDay; i++) {
+                const currentDateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                const selectionsCount = calendarSelections[currentDateStr] ? calendarSelections[currentDateStr].length : 0;
+                const isSelected = selectedDateStr === currentDateStr;
+                const hasSelections = selectionsCount > 0;
+
+                let indicator = hasSelections ? `<div class="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>` : '';
+                let classes = `relative cursor-pointer py-2 rounded-lg transition-all hover:bg-indigo-50 border border-transparent text-sm`;
+                if (isSelected) classes += ` bg-indigo-100 border-indigo-300 text-indigo-800 font-bold shadow-inner`;
+                else if (hasSelections) classes += ` bg-emerald-50 text-emerald-800 font-medium`;
+                
+                daysContainer.innerHTML += `
+                    <div class="${classes}" onclick="openSlotsPanel('${currentDateStr}')">
+                        ${i}${indicator}
+                    </div>`;
+            }
+        };
+
+        window.changeMonth = (direction) => {
+            currentMonth += direction;
+            if (currentMonth > 11) { currentMonth = 0; currentYear++; } 
+            else if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+            renderCalendar();
+        };
+
+        window.openSlotsPanel = (dateStr) => {
+            selectedDateStr = dateStr;
+            renderCalendar(); 
+
+            const panel = document.getElementById('slots-panel');
+            const dateDisplay = document.getElementById('selected-date-display');
+            const container = document.getElementById('slots-container');
+            const counter = document.getElementById('day-counter');
+
+            panel.classList.remove('hidden');
+            const dateObj = new Date(dateStr);
+            dateDisplay.innerText = `${WEEKDAYS[dateObj.getDay()]} ${dateObj.getDate()} ${MONTHS[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+
+            const currentSelections = calendarSelections[dateStr] || [];
+            counter.innerText = `${currentSelections.length}/2 حصص`;
+            const isMax = currentSelections.length >= 2;
+
+            container.innerHTML = SLOTS.map(slot => {
+                const isChecked = currentSelections.includes(slot.id);
+                const isDisabled = !isChecked && isMax;
+                return `
+                    <label class="checkbox-wrapper relative flex items-center gap-3 p-3 rounded-lg border ${isDisabled ? 'border-gray-200 bg-gray-100 opacity-60' : 'border-gray-300 bg-white hover:bg-indigo-50'} cursor-pointer transition w-full shadow-sm group">
+                        <input type="checkbox" class="sr-only peer" value="${slot.id}" ${isChecked ? 'checked' : ''} ${isDisabled ? 'disabled' : ''} onchange="handleCalendarSlotSelection(this)">
+                        <div class="w-5 h-5 rounded border ${isChecked ? 'border-emerald-500 bg-emerald-500' : 'border-gray-300 group-hover:border-indigo-400'} flex items-center justify-center transition-colors">
+                            <svg class="${isChecked ? 'block' : 'hidden'} w-3 h-3 text-white pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-bold text-gray-700 text-sm group-hover:text-indigo-700 transition-colors">${slot.name}</p>
+                            <p class="text-xs text-gray-500">${slot.time}</p>
+                        </div>
+                    </label>`;
+            }).join('');
+        };
+
+        window.handleCalendarSlotSelection = (checkbox) => {
+            if (!selectedDateStr) return;
+            if (!calendarSelections[selectedDateStr]) calendarSelections[selectedDateStr] = [];
+
+            if (checkbox.checked) {
+                if (calendarSelections[selectedDateStr].length >= 2) {
+                    checkbox.checked = false;
+                    showToast("لا يمكنك اختيار أكثر من حصتين في اليوم الواحد", "warning");
+                    return;
+                }
+                calendarSelections[selectedDateStr].push(checkbox.value);
+            } else {
+                calendarSelections[selectedDateStr] = calendarSelections[selectedDateStr].filter(val => val !== checkbox.value);
+            }
+            openSlotsPanel(selectedDateStr);
+        };
+
+        document.getElementById('teacher-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if(!db || !currentUser) { showToast("الخدمة غير متصلة حالياً", "error"); return; }
+
+            const name = document.getElementById('t-name').value.trim();
+            const phone = document.getElementById('t-phone').value.trim();
+            const subject = document.getElementById('t-subject').value.trim();
+            const className = document.getElementById('t-class').value.trim();
+            const btn = document.getElementById('btn-submit');
+            
+            const allSelectedSlots = [];
+            Object.keys(calendarSelections).forEach(dateStr => {
+                calendarSelections[dateStr].forEach(slotId => allSelectedSlots.push({ date: dateStr, slot: slotId }));
+            });
+
+            if (allSelectedSlots.length === 0) { showToast("الرجاء اختيار حصة مراقبة واحدة على الأقل", "warning"); return; }
+
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> جاري المعالجة...`;
+
+            try {
+                const path = `artifacts/${appId}/public/data/exam_schedule`;
+                
+                // Fetch existing exams to validate Class Constraints (Max 2 per day per class)
+                const snapshot = await getDocs(collection(db, path));
+                const existingExamsForClass = {}; 
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.className === className) { 
+                        existingExamsForClass[data.date] = (existingExamsForClass[data.date] || 0) + 1;
+                    }
+                });
+
+                // Group NEW selections by date
+                const newExamsByDate = {};
+                allSelectedSlots.forEach(s => {
+                    newExamsByDate[s.date] = (newExamsByDate[s.date] || 0) + 1;
+                });
+
+                // Validate: existing + new must not exceed 2 per day
+                let limitExceeded = false;
+                for (const [date, newCount] of Object.entries(newExamsByDate)) {
+                    const existingCount = existingExamsForClass[date] || 0;
+                    if (existingCount + newCount > 2) {
+                        limitExceeded = true;
+                        break;
+                    }
+                }
+
+                if (limitExceeded) {
+                    showToast("هذا غير ممكن! القسم المختار تجاوز الحد الأقصى (فرضين) في أحد الأيام المختارة. الرجاء اختيار وقت آخر.", "error");
+                    btn.disabled = false;
+                    btn.innerHTML = `<span>إرسال الاختيارات</span><i class="fas fa-paper-plane"></i>`;
+                    return; // Stop submission
+                }
+
+                // توليد معرف فريد للمحاولة
+                const uniqueSubmissionId = 'SUB-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+                // حفظ كل حصة كوثيقة (Document) مستقلة لتسهيل الحذف والتعديل الفردي
+                const promises = allSelectedSlots.map(sel => 
+                    addDoc(collection(db, path), {
+                        teacherName: name, phone: phone, subject: subject, className: className,
+                        date: sel.date, slotId: sel.slot,
+                        timestamp: serverTimestamp(), userId: currentUser.uid,
+                        submissionId: uniqueSubmissionId
+                    })
+                );
+                await Promise.all(promises);
+
+                showToast(`تم تسجيل اختياراتك بنجاح! معرف المحاولة: ${uniqueSubmissionId}`, "success");
+                document.getElementById('teacher-form').reset();
+                document.getElementById('t-subject').innerHTML = '<option value="" disabled selected>الرجاء اختيار القسم أولاً</option>';
+                document.getElementById('t-subject').disabled = true;
+                calendarSelections = {};
+                selectedDateStr = null;
+                renderCalendar();
+                document.getElementById('slots-panel').classList.add('hidden');
+            } catch (error) {
+                console.error("Error saving data: ", error);
+                showToast("حدث خطأ أثناء حفظ البيانات", "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<span>إرسال الاختيارات</span><i class="fas fa-paper-plane"></i>`;
+            }
+        });
+
+        let unsubscribeTeacher = null;
+        const loadTeacherExams = () => {
+            if(!db || !currentUser) return;
+            const path = `artifacts/${appId}/public/data/exam_schedule`;
+            const q = query(collection(db, path), where("userId", "==", currentUser.uid));
+            
+            if(unsubscribeTeacher) unsubscribeTeacher();
+            unsubscribeTeacher = onSnapshot(q, (snapshot) => {
+                const container = document.getElementById('teacher-exams-list');
+                if(snapshot.empty) {
+                    container.innerHTML = `<div class="text-gray-500 text-sm italic col-span-full">لا توجد فروض مبرمجة حالياً.</div>`;
+                    return;
+                }
+                
+                let html = '';
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const slotObj = SLOTS.find(s => s.id === data.slotId);
+                    const slotName = slotObj ? slotObj.name : '';
+                    html += `
+                        <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex justify-between items-center hover:shadow-md transition">
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded shadow-sm">${data.className}</span>
+                                    <span class="font-bold text-sm text-gray-800">${data.subject}</span>
+                                </div>
+                                <p class="text-xs text-gray-600 mt-2"><i class="fas fa-calendar-day ml-1 text-gray-400"></i>${data.date} | ${slotName}</p>
+                                <p class="text-[10px] text-gray-400 mt-1 font-mono tracking-wider"><i class="fas fa-hashtag text-gray-300 ml-1"></i>${data.submissionId}</p>
+                            </div>
+                            <button onclick="deleteTeacherExam('${doc.id}')" class="text-red-500 hover:text-white hover:bg-red-500 bg-red-50 w-10 h-10 rounded-full flex items-center justify-center transition" title="حذف الفرض">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            });
+        };
+
+        window.deleteTeacherExam = (docId) => {
+            openGlobalConfirm("حذف الفرض", "هل أنت متأكد من حذف موعد هذا الفرض؟", async () => {
+                try {
+                    await deleteDoc(doc(db, `artifacts/${appId}/public/data/exam_schedule`, docId));
+                    showToast('تم الحذف بنجاح', 'success');
+                } catch(e) { showToast('حدث خطأ أثناء الحذف', 'error'); }
+            });
+        };
+
+        window.changeAdminMonth = (direction) => {
+            adminMonth += direction;
+            if (adminMonth > 11) { adminMonth = 0; adminYear++; } 
+            else if (adminMonth < 0) { adminMonth = 11; adminYear--; }
+            renderAdminCalendar();
+        };
+
+        const renderAdminCalendar = () => {
+            const monthYearDisplay = document.getElementById('admin-calendar-month-year');
+            const daysContainer = document.getElementById('admin-calendar-days');
+            const weekdaysContainer = document.getElementById('admin-calendar-weekdays');
+
+            monthYearDisplay.innerText = `${MONTHS[adminMonth]} ${adminYear}`;
+            
+            if (weekdaysContainer.innerHTML.trim() === '') {
+                weekdaysContainer.innerHTML = WEEKDAYS.map(day => `<div class="text-center font-bold text-gray-500 py-2 bg-white rounded-lg shadow-sm border border-gray-100 text-sm">${day}</div>`).join('');
+            }
+
+            daysContainer.innerHTML = '';
+            const firstDayIndex = new Date(adminYear, adminMonth, 1).getDay();
+            const lastDay = new Date(adminYear, adminMonth + 1, 0).getDate();
+
+            for (let i = 0; i < firstDayIndex; i++) daysContainer.innerHTML += `<div class="bg-transparent rounded-xl border border-dashed border-gray-200/50"></div>`;
+
+            for (let i = 1; i <= lastDay; i++) {
+                const currentDateStr = `${adminYear}-${String(adminMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                let dayExamsHtml = '';
+                let hasExams = false;
+                
+                allSubmissions.forEach(sub => {
+                    if (sub.date === currentDateStr) {
+                        hasExams = true;
+                        const slotObj = SLOTS.find(s => s.id === sub.slotId);
+                        const slotName = slotObj ? slotObj.name : '';
+                        const slotTime = slotObj ? slotObj.time : '';
+                        
+                        const tooltipText = `أ. ${sub.teacherName}\nالهاتف: ${sub.phone}\n${slotName} (${slotTime})`;
+                        
+                        dayExamsHtml += `
+                            <div onclick="openAdminEditModal('${sub.id}')" class="bg-white border border-gray-100 rounded p-1.5 mb-1.5 hover:bg-indigo-50 hover:border-indigo-400 transition-colors cursor-pointer group shadow-sm relative" title="${tooltipText}">
+                                <div class="flex items-center justify-between gap-1 mb-1">
+                                    <span class="bg-blue-100 text-blue-800 text-[9px] font-bold px-1.5 py-0.5 rounded">${sub.className || 'غير محدد'}</span>
+                                    <i class="fas fa-pen text-indigo-300 opacity-0 group-hover:opacity-100 text-[10px]"></i>
+                                </div>
+                                <div class="text-[11px] font-bold text-gray-800 truncate"><i class="fas fa-book-open text-emerald-500 ml-1"></i>${sub.subject}</div>
+                                <div class="text-[9px] text-gray-500 mt-0.5 truncate">أ. ${sub.teacherName}</div>
+                            </div>
+                        `;
+                    }
+                });
+
+                daysContainer.innerHTML += `
+                    <div class="bg-gray-50 border ${hasExams ? 'border-indigo-200 shadow-md ring-1 ring-indigo-50' : 'border-gray-200 shadow-sm'} rounded-xl p-2 min-h-[140px] flex flex-col transition-all">
+                        <div class="text-left font-extrabold text-sm mb-2 ${hasExams ? 'text-indigo-600' : 'text-gray-400'}">${i}</div>
+                        <div class="flex-1 overflow-y-auto pr-1 custom-scrollbar space-y-1">
+                            ${dayExamsHtml}
+                        </div>
+                    </div>
+                `;
+            }
+        };
+
+        const loadAdminData = () => {
+            if(!db || !currentUser) return;
+            const path = `artifacts/${appId}/public/data/exam_schedule`;
+            const loading = document.getElementById('admin-loading');
+            loading.classList.remove('hidden');
+            
+            if(unsubscribeAdmin) unsubscribeAdmin();
+            unsubscribeAdmin = onSnapshot(collection(db, path), (snapshot) => {
+                loading.classList.add('hidden');
+                document.getElementById('total-submissions').innerText = `${snapshot.size} فروض`;
+                allSubmissions = [];
+                snapshot.forEach(doc => allSubmissions.push({ id: doc.id, ...doc.data() }));
+                renderAdminCalendar();
+            }, (error) => {
+                console.error("Error fetching data: ", error);
+                loading.innerHTML = `<div class="text-red-500 flex flex-col items-center"><i class="fas fa-wifi text-4xl mb-3"></i><p>فشل تحميل البيانات. الرجاء التأكد من الاتصال.</p></div>`;
+            });
+        };
+
+        window.openAdminEditModal = (docId) => {
+            const sub = allSubmissions.find(s => s.id === docId);
+            if(!sub) return;
+            
+            document.getElementById('edit-doc-id').value = docId;
+            document.getElementById('edit-date').value = sub.date;
+            document.getElementById('edit-class').value = sub.className;
+            
+            const slotSelect = document.getElementById('edit-slot');
+            slotSelect.innerHTML = SLOTS.map(s => `<option value="${s.id}" ${s.id === sub.slotId ? 'selected' : ''}>${s.name} (${s.time})</option>`).join('');
+            
+            const modal = document.getElementById('admin-edit-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => { modal.classList.remove('opacity-0'); document.getElementById('admin-edit-content').classList.remove('scale-95'); }, 10);
+        };
+
+        window.closeAdminEditModal = () => {
+            const modal = document.getElementById('admin-edit-modal');
+            modal.classList.add('opacity-0');
+            document.getElementById('admin-edit-content').classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        };
+
+        document.getElementById('admin-edit-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const docId = document.getElementById('edit-doc-id').value;
+            const newDate = document.getElementById('edit-date').value;
+            const newSlot = document.getElementById('edit-slot').value;
+            const newClass = document.getElementById('edit-class').value;
+
+            try {
+                await updateDoc(doc(db, `artifacts/${appId}/public/data/exam_schedule`, docId), {
+                    date: newDate,
+                    slotId: newSlot,
+                    className: newClass
+                });
+                showToast('تم تحديث الفرض بنجاح', 'success');
+                closeAdminEditModal();
+            } catch(error) {
+                showToast('حدث خطأ أثناء التحديث', 'error');
+            }
+        });
+
+        window.deleteAdminExam = () => {
+            const docId = document.getElementById('edit-doc-id').value;
+            openGlobalConfirm("حذف الفرض", "هل أنت متأكد من حذف هذا الفرض نهائياً من الجدولة؟", async () => {
+                try {
+                    await deleteDoc(doc(db, `artifacts/${appId}/public/data/exam_schedule`, docId));
+                    showToast('تم الحذف بنجاح', 'success');
+                    closeAdminEditModal();
+                } catch(e) { showToast('حدث خطأ أثناء الحذف', 'error'); }
+            });
+        };
+
+        window.fetchStudentSchedule = async () => {
+            if(!db || !currentUser) { showToast("الخدمة غير متصلة حالياً", "error"); return; }
+
+            const selectedClass = document.getElementById('s-class-select').value.trim();
+            if (!selectedClass) { showToast("الرجاء اختيار القسم أولاً", "warning"); return; }
+
+            const loading = document.getElementById('student-loading');
+            const container = document.getElementById('student-schedule-container');
+            loading.classList.remove('hidden');
+            
+            try {
+                const path = `artifacts/${appId}/public/data/exam_schedule`;
+                const snapshot = await getDocs(collection(db, path));
+                const examsList = [];
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.className === selectedClass) {
+                        examsList.push({ date: data.date, slotId: data.slotId, subject: data.subject, teacherName: data.teacherName });
+                    }
+                });
+
+                examsList.sort((a, b) => {
+                    if (a.date !== b.date) return a.date.localeCompare(b.date);
+                    return a.slotId.localeCompare(b.slotId);
+                });
+
+                loading.classList.add('hidden');
+
+                if (examsList.length === 0) {
+                    container.innerHTML = `
+                        <div class="h-full flex flex-col items-center justify-center text-gray-400 py-12 min-h-[300px]">
+                            <i class="fas fa-clipboard-check text-6xl mb-4 opacity-50 text-emerald-500"></i>
+                            <p class="text-xl font-medium text-gray-600">لا توجد فروض مبرمجة حالياً لقسم ${selectedClass}</p>
+                        </div>`;
+                    return;
+                }
+
+                const groupedExams = {};
+                examsList.forEach(exam => {
+                    if (!groupedExams[exam.date]) groupedExams[exam.date] = [];
+                    groupedExams[exam.date].push(exam);
+                });
+
+                let html = `<div class="mb-6 border-b-2 border-blue-500 pb-2 inline-block"><h3 class="text-xl font-bold text-gray-800">جدول فروض قسم: <span class="text-blue-600">${selectedClass}</span></h3></div>`;
+                html += `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">`;
+                
+                Object.keys(groupedExams).forEach(dateStr => {
+                    const dateObj = new Date(dateStr);
+                    const formattedDate = `${WEEKDAYS[dateObj.getDay()]}، ${dateObj.getDate()} ${MONTHS[dateObj.getMonth()]} ${dateObj.getFullYear()}`;
+                    
+                    html += `
+                        <div class="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+                            <div class="bg-blue-50 border-b border-blue-100 p-3 flex items-center gap-2">
+                                <i class="fas fa-calendar-alt text-blue-600 text-lg"></i>
+                                <h4 class="font-bold text-gray-800 text-sm">${formattedDate}</h4>
+                            </div>
+                            <div class="p-4 space-y-4">`;
+                    
+                    groupedExams[dateStr].forEach(exam => {
+                        const slotObj = SLOTS.find(s => s.id === exam.slotId);
+                        const timeName = slotObj ? slotObj.name : 'غير معروف';
+                        const timeStr = slotObj ? slotObj.time : '';
+                        
+                        html += `
+                            <div class="bg-gray-50 rounded-lg p-3 border border-gray-100 relative pl-4 border-r-4 border-r-blue-500 shadow-sm">
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded shadow-sm">${timeName}</span>
+                                    <span class="text-xs font-mono text-gray-500 bg-white border border-gray-200 px-1 rounded">${timeStr}</span>
+                                </div>
+                                <div class="font-bold text-gray-800 mb-1"><i class="fas fa-book-open text-emerald-500 ml-1"></i>${exam.subject}</div>
+                                <div class="text-xs text-gray-600 flex items-center gap-1 mt-2">
+                                    <i class="fas fa-chalkboard-teacher text-gray-400"></i>
+                                    أ. ${exam.teacherName}
+                                </div>
+                            </div>`;
+                    });
+                    html += `</div></div>`;
+                });
+                html += `</div>`;
+                container.innerHTML = html;
+
+            } catch (error) {
+                console.error("Error fetching student schedule:", error);
+                loading.classList.add('hidden');
+                showToast("حدث خطأ أثناء جلب الجدول", "error");
+            }
+        };
+
+        const initApp = async () => {
+            if (!firebaseConfig) { console.log("No Firebase config found."); return; }
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                if (initialToken) await signInWithCustomToken(auth, initialToken);
+                else await signInAnonymously(auth);
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) currentUser = user;
+                });
+            } catch (err) {
+                console.error("Firebase Initialization Error:", err);
+                showToast("مشكلة في الاتصال بقاعدة البيانات", "error");
+            }
+        };
+
+        window.addEventListener('DOMContentLoaded', initApp);
+
+    </script>
+</body>
+</html>
